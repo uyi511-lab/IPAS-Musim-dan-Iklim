@@ -1,0 +1,141 @@
+<!DOCTYPE html><html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Flying Adventure – Misi Menyelamatkan Iklim</title>
+<style>
+*{box-sizing:border-box}html,body{margin:0;height:100%;overflow:hidden;font-family:"Trebuchet MS",system-ui,sans-serif;background:#7ec8f0;touch-action:none}
+canvas{position:fixed;inset:0;width:100%;height:100%}#fg{z-index:5;pointer-events:none}
+#pg{position:fixed;top:0;left:0;height:6px;background:#facc15;z-index:7;width:0}
+#hud{position:fixed;top:8px;left:0;right:0;z-index:6;display:flex;gap:6px;flex-wrap:wrap;justify-content:center;padding:0 8px}
+.chip{background:#fff;border-radius:14px;padding:5px 11px;font-weight:700;color:#075985;box-shadow:0 2px 6px #0003;font-size:clamp(11px,1.5vw,17px)}
+#bar{position:fixed;bottom:8px;right:8px;z-index:7;display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+button{font:inherit;font-weight:700;border:0;border-radius:14px;padding:10px 16px;background:#facc15;color:#422006;cursor:pointer;box-shadow:0 3px 0 #ca8a04}
+button.g{background:#34d399;box-shadow:0 3px 0 #059669;color:#064e3b}
+#cam{position:fixed;left:8px;bottom:8px;z-index:7;width:clamp(130px,18vw,230px);background:#0f172a;border-radius:14px;overflow:hidden;border:3px solid #fff;position:fixed}
+#cw{position:relative;display:none;transform:scaleX(-1)}#cw video,#cw canvas{width:100%;display:block}#cw canvas{position:absolute;inset:0;height:100%}
+#st{font-size:12px;color:#fff;padding:5px 7px}
+.ov{position:fixed;inset:0;z-index:4;display:none;align-items:center;justify-content:center;padding:56px 12px 64px;text-align:center}
+.card{background:#fffffff2;border-radius:22px;padding:16px 20px;max-width:920px;max-height:100%;overflow:auto;width:100%;box-shadow:0 6px 20px #0004;color:#0c4a6e}
+h1{margin:0 0 6px;font-size:clamp(22px,4vw,40px)}h2{margin:4px 0 10px;font-size:clamp(17px,2.6vw,28px)}
+#op{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.opt{background:#e0f2fe;color:#0c4a6e;box-shadow:0 3px 0 #7dd3fc;min-height:84px;font-size:clamp(15px,2.2vw,24px);text-align:left;border:4px solid transparent}
+.opt.hov{border-color:#f97316;background:#fef9c3}.opt.ok{background:#86efac;box-shadow:0 3px 0 #16a34a}.opt.no{background:#fca5a5;box-shadow:0 3px 0 #dc2626}
+#fb{margin-top:10px;font-size:clamp(14px,1.9vw,21px)}
+#bn{position:fixed;top:34%;left:0;right:0;text-align:center;z-index:6;font-size:clamp(24px,5vw,52px);font-weight:900;color:#fff;text-shadow:0 3px 8px #0006;display:none;pointer-events:none}
+.rv{text-align:left;font-size:clamp(12px,1.5vw,16px);margin:6px 0}
+@media(max-width:600px){#op{grid-template-columns:1fr}.opt{min-height:56px}}
+</style></head><body>
+<canvas id="bg"></canvas><div id="pg"></div>
+<div id="hud"><span class="chip" id="h1"></span><span class="chip" id="h2"></span><span class="chip" id="h3"></span><span class="chip" id="h4"></span><span class="chip" id="h5"></span>
+<span class="chip">✋ Telapak: mulai/lanjut · ☝️ Telunjuk: arahkan · ✊ Kepal: pilih jawaban</span></div>
+<div id="bn"></div>
+<div class="ov" id="m"><div class="card"><h1>✈️ Flying Adventure</h1><h2>Misi Menyelamatkan Iklim · IPAS Kelas IV</h2><div id="mi"></div><p><button class="g" id="go">▶ Mulai</button></p></div></div>
+<div class="ov" id="q"><div class="card"><div id="qn" style="font-weight:700"></div><h2 id="qt"></h2><div id="op"></div><div id="fb"></div></div></div>
+<canvas id="fg"></canvas>
+<div id="cam"><div id="cw"><video id="vid" playsinline muted></video><canvas id="hc"></canvas></div><div id="st">Kamera belum aktif. Tekan “Aktifkan Kamera”, atau main dengan sentuhan/mouse.</div></div>
+<div id="bar"><button id="bCam">📷 Aktifkan Kamera</button><button id="bPause">⏸ Jeda</button><button id="bRe">↻ Ulangi</button></div>
+<script>
+const $=i=>document.getElementById(i),bg=$('bg'),fg=$('fg'),c=bg.getContext('2d'),f=fg.getContext('2d'),vid=$('vid'),hc=$('hc'),hx=hc.getContext('2d');
+let W,H,U;function rs(){W=bg.width=fg.width=innerWidth;H=bg.height=fg.height=innerHeight;U=H/600}rs();onresize=rs;
+const cl=(v,a,b)=>Math.max(a,Math.min(b,v)),gy=()=>H*.88-14*U;
+const MS=['Misi 1 – Mengenal Musim dan Iklim','Misi 2 – Jenis-Jenis Iklim','Misi 3 – Dampak Positif dan Negatif','Misi 4 – Penyelamatan Sumber Daya Alam'];
+const mi=k=>k<3?0:k<6?1:k<10?2:3;
+// [soal, [A,B,C,D], indeks kunci (0=A), pembahasan]
+const Q=[
+["Keadaan cuaca rata-rata di wilayah yang luas dalam waktu lama (sekitar 30 tahun) disebut ....",["Musim","Iklim","Angin","Hujan"],1,"Iklim adalah rata-rata cuaca di wilayah luas dalam waktu yang lama."],
+["Indonesia mengalami dua musim, yaitu ....",["Musim semi dan musim gugur","Musim panas dan musim dingin","Musim hujan dan musim kemarau","Musim salju dan musim semi"],2,"Indonesia hanya memiliki musim hujan dan musim kemarau."],
+["Pernyataan yang benar tentang musim dan iklim adalah ....",["Musim berganti dalam setahun, iklim adalah rata-rata cuaca jangka panjang","Musim dan iklim sama persis","Iklim berganti setiap hari","Musim berlangsung 30 tahun"],0,"Musim berganti tiap beberapa bulan, sedangkan iklim berlangsung lama dan stabil."],
+["Indonesia dekat garis khatulistiwa sehingga beriklim ....",["Kutub","Sedang","Gurun","Tropis"],3,"Wilayah di sekitar khatulistiwa beriklim tropis: panas dan banyak hujan."],
+["Wilayah yang sangat dingin dan tertutup es sepanjang tahun beriklim ....",["Tropis","Kutub","Sedang","Tropis basah"],1,"Daerah dekat Kutub Utara dan Selatan beriklim kutub."],
+["Iklim yang memiliki empat musim (semi, panas, gugur, dingin) adalah iklim ....",["Sedang","Tropis","Kutub","Gurun"],0,"Iklim sedang mempunyai empat musim."],
+["Dampak positif musim hujan adalah ....",["Terjadi banjir","Tanah longsor","Persediaan air melimpah untuk sawah","Rumah rusak"],2,"Air hujan membantu sawah dan mengisi sumur serta sungai."],
+["Dampak negatif musim hujan yang sering terjadi adalah ....",["Panen garam","Banjir dan tanah longsor","Menjemur padi","Sumur penuh air bersih"],1,"Hujan deras dapat menyebabkan banjir dan longsor."],
+["Dampak negatif musim kemarau adalah ....",["Kekeringan dan sulit air bersih","Sawah subur","Sungai meluap","Banjir bandang"],0,"Kemarau panjang membuat tanah kering dan air sulit didapat."],
+["Dampak positif musim kemarau bagi petani garam adalah ....",["Garam sulit dibuat","Air laut cepat menguap sehingga garam mudah dibuat","Sawah tergenang","Ikan banyak hilang"],1,"Terik matahari mempercepat penguapan air laut menjadi garam."],
+["Cara menghemat air bersih adalah ....",["Membiarkan keran menyala","Mencuci mobil tiap hari","Mematikan keran saat tidak dipakai","Membuang air ke jalan"],2,"Menutup keran membantu menjaga persediaan air."],
+["Menanam pohon bermanfaat karena ....",["Menambah asap","Menyerap karbon dioksida dan menahan air tanah","Membuat udara panas","Mengurangi oksigen"],1,"Pohon menyerap CO₂, memberi oksigen, dan menahan air."],
+["Mendaur ulang sampah plastik bermanfaat untuk ....",["Menambah tumpukan sampah","Membakar sampah","Mengurangi sampah dan menghemat sumber daya","Mencemari laut"],2,"Daur ulang mengubah sampah menjadi barang berguna."],
+["Contoh energi terbarukan adalah ....",["Batu bara","Minyak bumi","Bensin","Tenaga surya dan angin"],3,"Matahari dan angin tidak habis dan lebih ramah lingkungan."],
+["Tindakan yang membantu mengurangi perubahan iklim adalah ....",["Naik sepeda atau berjalan kaki untuk jarak dekat","Membakar sampah","Menyalakan lampu terus","Menebang hutan"],0,"Mengurangi asap kendaraan menurunkan gas rumah kaca."]];
+let S='menu',n=0,score=0,ok=0,col=0,log=[],t=0,off=0,flyT=0,to=0,lt=0,sp=0,hit=0,roll=0,paused=false,objs=[],ps=[],px=0,py=0,tx=0,ty=0,rot=0;
+px=tx=.15*W;py=ty=gy();
+const L='ABCD',ICON=['💧','🌱','♻️','⚡'];
+function hud(){const m=mi(Math.min(n,14));$('h1').textContent=MS[m];$('h2').textContent='Soal '+Math.min(n+1,15)+'/15';$('h3').textContent='✅ Benar: '+ok;$('h4').textContent='⭐ Skor: '+score+'/1500';$('h5').textContent='Simbol: '+col;$('pg').style.width=(n/15*100)+'%'}
+function banner(s){const b=$('bn');b.textContent=s;b.style.display='block';setTimeout(()=>b.style.display='none',2200)}
+function menu(){$('m').style.display='flex';$('mi').innerHTML='<p>Kamu pilot pesawat kecil! Terbang melewati langit, hindari awan badai ⛈️, kumpulkan simbol 💧🌱♻️⚡ dan jawab 15 soal tentang musim dan iklim.</p><p>Nyalakan kamera, lalu <b>tahan telapak tangan ✋</b> untuk mulai.</p>'}
+function start(){snd();n=0;score=0;ok=0;col=0;log=[];objs=[];ps=[];S='takeoff';to=0;hit=0;roll=0;px=.15*W;py=gy();$('m').style.display='none';$('q').style.display='none';paused=false;$('bPause').textContent='⏸ Jeda';banner('Lepas landas! ✈️')}
+function showQ(){S='question';objs=[];const q=Q[n];tx=W*.5;ty=H*.5;$('q').style.display='flex';$('qn').textContent=MS[mi(n)]+' · Soal '+(n+1)+'/15';$('qt').textContent=q[0];$('fb').innerHTML='<i>Arahkan pesawat ke jawaban lalu kepalkan tangan ✊ (atau ketuk jawaban).</i>';
+$('op').innerHTML=q[1].map((o,i)=>'<button class="opt" data-i="'+i+'"><b>'+L[i]+'.</b> '+o+'</button>').join('')}
+function pick(i){if(S!='question'||paused)return;S='feedback';const q=Q[n],r=i==q[2];if(r){score+=100;ok++;burst(px,py,'#facc15',30)}log.push([n,i]);
+document.querySelectorAll('.opt').forEach((b,k)=>{b.classList.remove('hov');if(k==q[2])b.classList.add('ok');else if(k==i)b.classList.add('no')});
+$('fb').innerHTML=(r?'<b style="color:#15803d">✅ Benar! +100 poin</b>':'<b style="color:#b91c1c">❌ Belum tepat (0 poin). Jawaban: '+L[q[2]]+'</b>')+'<br>'+q[3]+'<br><button class="g" id="nx" style="margin-top:8px">Lanjut ✋</button>'}
+function next(){if(S!='feedback')return;$('q').style.display='none';n++;if(n==15){S='landing';lt=0;banner('Semua misi selesai! Bersiap mendarat 🛬');return}
+if(mi(n)!=mi(n-1)){roll=1.2;banner('🎉 Misi selesai! '+MS[mi(n)])}S='fly';flyT=0;objs=[];tx=px;ty=py}
+function end(){S='end';const p=score>=1200?'Luar biasa! Kamu Pilot Penyelamat Iklim! 🌍':score>=800?'Hebat! Terus belajar menjaga bumi ya! 🌱':'Ayo terbang lagi, kamu pasti bisa lebih baik! 💪';
+$('m').style.display='flex';$('go').textContent='🔁 Main Lagi';$('mi').innerHTML='<h2>Skor: '+score+' / 1500 · Benar '+ok+' dari 15</h2><p><b>'+p+'</b></p><p>Simbol terkumpul: '+col+'</p><div style="max-height:34vh;overflow:auto"><b>Pembahasan:</b>'+Q.map((q,i)=>{const a=log[i];return '<div class="rv">'+(a&&a[1]==q[2]?'✅':'❌')+' <b>'+(i+1)+'.</b> '+q[0]+' <b>Jawaban: '+L[q[2]]+'. '+q[1][q[2]]+'</b> – '+q[3]+'</div>'}).join('')+'</div>'}
+function burst(x,y,k,m){for(let i=0;i<m;i++)ps.push([x,y,(Math.random()-.5)*300,(Math.random()-.5)*300,.8,k])}
+function step(dt){t+=dt;let v=0,rate=7;hit=Math.max(0,hit-dt);
+if(S=='menu'){px=.15*W;py=gy();rot=0}
+else if(S=='takeoff'){to+=dt;if(to<2){v=to*150;py=gy();px=.15*W;rot=0}else{v=300;py-=130*U*dt;px+=40*U*dt;rot=-.3;if(py<H*.5){S='fly';flyT=0;tx=px;ty=py}}}
+else{if(S=='landing'){lt+=dt;tx=.42*W;ty=gy();rate=1.3;v=Math.max(40,260-lt*70);if(lt>3.8)end()}
+else if(S=='fly'){v=hit>0?110:260;tx=cl(tx,.08*W,.65*W);ty=cl(ty,.1*H,.8*H);flyT+=dt;if(flyT>6.5)showQ()}
+else v=90;
+px+=(tx-px)*Math.min(1,dt*rate);py+=(ty-py)*Math.min(1,dt*rate);rot=cl((ty-py)*.004,-.45,.45);if(S=='landing'&&lt>2.5)rot=.05}
+if(roll>0){roll-=dt;rot-=(1-roll/1.2)*Math.PI*2}
+off+=v*U*dt;
+if(S=='fly'){sp-=dt;if(sp<0){sp=.8+Math.random()*.5;const s=Math.random()<.4;objs.push({s,x:W+60*U,y:H*(.12+Math.random()*.66),r:(s?36:20)*U,k:Math.random()*4|0})}}
+objs.forEach(o=>{o.x-=v*U*dt*(o.s?1.1:1);if(S=='fly'&&!o.d&&Math.hypot(o.x-px,o.y-py)<o.r+20*U){if(o.s){if(hit<=0){hit=1.2;burst(px,py,'#64748b',16)}}else{o.d=1;col++;burst(o.x,o.y,'#34d399',12)}}});
+objs=objs.filter(o=>o.x>-80*U&&!o.d);ps.forEach(p=>{p[0]+=p[2]*dt;p[1]+=p[3]*dt;p[4]-=dt});ps=ps.filter(p=>p[4]>0);
+if(S=='question')document.querySelectorAll('.opt').forEach(b=>{const r=b.getBoundingClientRect();b.classList.toggle('hov',px>r.left&&px<r.right&&py>r.top&&py<r.bottom)})}
+function cloud(x,y,s,k){c.fillStyle=k;[[0,0,24],[22,6,20],[-22,8,18],[8,-12,18]].forEach(a=>{c.beginPath();c.arc(x+a[0]*s,y+a[1]*s,a[2]*s,0,7);c.fill()})}
+function draw(){const m=(S=='menu'||S=='takeoff')?0:mi(Math.min(n,14)),sk=[['#38bdf8','#e0f2fe'],['#7dd3fc','#fef9c3'],['#64748b','#cbd5e1'],['#22d3ee','#dcfce7']][m];
+const g=c.createLinearGradient(0,0,0,H);g.addColorStop(0,sk[0]);g.addColorStop(1,sk[1]);c.fillStyle=g;c.fillRect(0,0,W,H);
+if(m!=2){c.fillStyle='#fde047';c.beginPath();c.arc(W*.88,90*U,40*U,0,7);c.fill()}
+c.fillStyle=m==1?'#6b8f9f':'#a7d3c4';c.beginPath();c.moveTo(0,H);for(let x=0;x<=W+8;x+=8)c.lineTo(x,H*.8-(m==1?150:50)*U*Math.abs(Math.sin((x+off*.2)/(160*U))));c.lineTo(W,H);c.fill();
+for(let i=0;i<6;i++){const P=W+260*U,x=(((i*330*U-off*.4)%P)+P)%P-130*U;cloud(x,(60+(i*97)%230)*U,U*1.2,m==2?'#94a3b8':'#fff')}
+const gr=(S=='menu'||S=='takeoff'||S=='landing');
+c.fillStyle=gr?'#64748b':['#0ea5e9','#65a30d','#15803d','#0d9488'][m];c.fillRect(0,H*.88,W,H*.12);
+if(gr){c.fillStyle='#fff';for(let x=-((off%(80*U))+80*U);x<W;x+=80*U)c.fillRect(x,H*.94,44*U,5*U)}
+else if(m==0||m==3){c.strokeStyle='#bae6fd';c.lineWidth=3;c.beginPath();for(let x=0;x<=W;x+=10)c.lineTo(x,H*.9+Math.sin((x+off)/(30*U))*3*U);c.stroke()}
+if(m==3&&!gr){c.font=34*U+'px serif';for(let i=0;i<8;i++){const P=W+100*U,x=(((i*180*U-off)%P)+P)%P;c.fillText('🌳',x-50*U,H*.9)}}
+if(m==2){c.strokeStyle='#dbeafe';c.lineWidth=2;c.beginPath();for(let i=0;i<50;i++){const x=(((i*83*U-off*.6)%W)+W)%W,y=(((i*211*U+t*600*U)%H)+H)%H;c.moveTo(x,y);c.lineTo(x-4,y+14)}c.stroke()}
+objs.forEach(o=>{if(o.s){cloud(o.x,o.y,o.r/26,'#374151');c.font=o.r*.9+'px serif';c.textAlign='center';c.fillText('⚡',o.x,o.y+o.r*.4)}else{c.font=o.r*2+'px serif';c.textAlign='center';c.fillText(ICON[o.k],o.x,o.y+o.r*.7)}});
+ps.forEach(p=>{c.globalAlpha=p[4];c.fillStyle=p[5];c.beginPath();c.arc(p[0],p[1],4*U,0,7);c.fill()});c.globalAlpha=1;
+if(paused){c.fillStyle='#0008';c.fillRect(0,0,W,H);c.fillStyle='#fff';c.font='bold '+60*U+'px sans-serif';c.textAlign='center';c.fillText('⏸ Jeda',W/2,H/2)}
+f.clearRect(0,0,W,H);plane(px,py,(S=='question'||S=='feedback'?.8:1.1)*U*1.1,rot)}
+function plane(x,y,s,r){f.save();f.translate(x,y);f.rotate(r);f.scale(s,s);if(hit>0&&Math.floor(t*12)%2)f.globalAlpha=.4;f.lineWidth=3;f.strokeStyle='#0369a1';f.lineJoin='round';
+f.fillStyle='#f97316';f.beginPath();f.moveTo(-40,-4);f.lineTo(-58,-30);f.lineTo(-38,-27);f.lineTo(-24,-4);f.closePath();f.fill();f.stroke();
+f.fillStyle='#fff';f.beginPath();f.ellipse(0,0,48,17,0,0,7);f.fill();f.stroke();
+f.fillStyle='#38bdf8';f.fillRect(-30,3,60,5);
+f.fillStyle='#7dd3fc';f.beginPath();f.ellipse(16,-7,12,8,0,0,7);f.fill();f.stroke();
+f.fillStyle='#facc15';f.beginPath();f.moveTo(-8,5);f.lineTo(-32,34);f.lineTo(-12,34);f.lineTo(16,6);f.closePath();f.fill();f.stroke();
+f.fillStyle='#94a3b8';f.beginPath();f.roundRect(-22,18,22,10,4);f.fill();f.stroke();
+f.fillStyle='#64748b';f.fillRect(46,-5,8,10);f.save();f.translate(55,0);f.scale(1,Math.abs(Math.sin(t*35))+.15);f.fillStyle='#33415599';f.fillRect(-2,-22,4,44);f.restore();f.restore()}
+// ===== Kontrol tangan =====
+let hl=null,lv=-1,pg='',hold=0,lastAct=0,handT=0,gl=0;
+const st=s=>$('st').textContent=s;
+$('bCam').onclick=async()=>{try{st('Meminta izin kamera…');const s=await navigator.mediaDevices.getUserMedia({video:{width:640,height:480,facingMode:'user'}});vid.srcObject=s;await vid.play();$('cw').style.display='block';st('Memuat model tangan…');
+const B='https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14',T=await import(B+'/vision_bundle.mjs'),fs=await T.FilesetResolver.forVisionTasks(B+'/wasm');
+hl=await T.HandLandmarker.createFromOptions(fs,{baseOptions:{modelAssetPath:'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task',delegate:'GPU'},runningMode:'VIDEO',numHands:1});st('Siap! Tunjukkan tangan ke kamera ✋');$('bCam').style.display='none'}catch(e){st('Kamera/model gagal ('+(e.message||e)+'). Gunakan HTTPS/localhost & internet, atau main dengan sentuhan/mouse.')}};
+function proc(r,dt){hx.clearRect(0,0,hc.width,hc.height);const P=r&&r.landmarks&&r.landmarks[0];let g='none';
+if(!P){if(performance.now()-handT>600&&hl)st('Tangan tidak terdeteksi. Dekatkan tangan & pastikan ruangan terang.');pg='';hold=0;return}
+handT=performance.now();hc.width=vid.videoWidth;hc.height=vid.videoHeight;hx.fillStyle='#facc15';P.forEach((p,i)=>{hx.beginPath();hx.arc(p.x*hc.width,p.y*hc.height,i==8?9:4,0,7);hx.fill()});
+const d=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y),w=P[0],e=[[8,6],[12,10],[16,14],[20,18]].map(a=>d(P[a[0]],w)>d(P[a[1]],w)*1.08),k=e.filter(Boolean).length;
+g=k==4?'palm':k==0?'fist':(e[0]&&k==1)?'point':'none';st({palm:'✋ Telapak terbuka',fist:'✊ Kepalan',point:'☝️ Menunjuk – pesawat mengikuti telunjuk',none:'Tangan terdeteksi – tunjuk dengan telunjuk'}[g]);
+if(g=='point'&&!paused){tx=cl(((1-P[8].x)-.15)/.7,0,1)*W;ty=cl((P[8].y-.1)/.7,0,1)*H}
+if((g=='palm'||g=='fist')&&g==pg)hold+=dt;else hold=0;pg=g;
+if(hold>.55&&performance.now()-lastAct>800&&!paused){lastAct=performance.now();hold=0;
+if(g=='palm'){if(S=='menu'||S=='end')start();else if(S=='feedback')next()}
+if(g=='fist'&&S=='question'){const b=[...document.querySelectorAll('.opt')].findIndex(b=>b.classList.contains('hov'));if(b>=0)pick(b);else st('Arahkan pesawat ke kotak jawaban dulu, lalu kepalkan tangan.')}}}
+// ===== Input sentuh / mouse / tombol =====
+const hand=()=>performance.now()-handT<500;
+addEventListener('pointermove',e=>{if(!hand()&&!paused&&(e.pointerType=='mouse'||e.buttons)){tx=e.clientX;ty=e.clientY}});
+addEventListener('pointerdown',e=>{if(!hand()&&!paused){tx=e.clientX;ty=e.clientY}});
+$('op').onclick=e=>{const b=e.target.closest('.opt');if(b)pick(+b.dataset.i)};
+$('fb').onclick=e=>{if(e.target.id=='nx')next()};
+$('go').onclick=start;$('bRe').onclick=start;
+$('bPause').onclick=()=>{if(S=='menu'||S=='end')return;paused=!paused;$('bPause').textContent=paused?'▶ Lanjutkan':'⏸ Jeda';if(gn)gn.gain.value=paused?0:.03};
+// ===== Suara mesin lembut =====
+let ac,gn;function snd(){if(ac)return;try{ac=new AudioContext();const o=ac.createOscillator(),l=ac.createBiquadFilter();gn=ac.createGain();o.type='sawtooth';o.frequency.value=60;l.frequency.value=200;gn.gain.value=.03;o.connect(l);l.connect(gn);gn.connect(ac.destination);o.start()}catch(e){}}
+let last=0;function loop(ts){const dt=Math.min(.05,(ts-last)/1000||0);last=ts;if(!paused)step(dt);
+if(hl&&vid.readyState>=2&&vid.currentTime!==lv){lv=vid.currentTime;try{proc(hl.detectForVideo(vid,ts),dt)}catch(e){}}
+draw();hud();requestAnimationFrame(loop)}
+menu();requestAnimationFrame(loop);
+</script></body></html>
